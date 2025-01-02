@@ -33,3 +33,8 @@ io.on('connection', (socket) => {
 server.listen(3000, () => {
     console.log('Socket.IO server is running on port 3000');
 });
+
+
+// So here are the following requirements we need to fullfil. 
+// 1. Right now the channel is open which means whoever enters the links which get the messages from all the participants. Which is not good. So the user should first request for the chat to some user and than that chat between those 2 users should be private between 2 participants. Might need to update the database schema also
+// 2.  The messages should be encripted following the HIPAA complience. 
