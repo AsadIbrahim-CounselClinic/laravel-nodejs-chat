@@ -21,12 +21,30 @@ app.use(cors({
 
 
 io.on('connection', (socket) => {
-    console.log('A user connected');
-    socket.on('new-message', (message) => {
-        io.emit('receive-message', message);
+    console.log(`User connected: ${socket.id}`);
+
+    // Join a chat room
+    socket.on('join-room', (roomId) => {
+        socket.join(roomId);
+        console.log(`User joined room: ${roomId}`);
     });
+
+    // Send message
+    socket.on('send-message', (data) => {
+        console.log(data);
+        const { roomId, message, replyTo, name } = data;
+
+        io.to(roomId).emit('receive-message', {
+            message: message.message,
+            replyTo: message.reply_to,
+            senderId: socket.id,
+            senderName: message.name,
+            timestamp: new Date(),
+        });
+    });
+
     socket.on('disconnect', () => {
-        console.log('A user disconnected');
+        console.log(`User disconnected: ${socket.id}`);
     });
 });
 

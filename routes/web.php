@@ -13,11 +13,13 @@ Route::get('/dashboard', function () {
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
+    Route::get('/users', [ProfileController::class, 'users']);
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-    Route::get('/chat', [ChatController::class, 'index']);
-    Route::post('/messages', [ChatController::class, 'store']);
+    Route::post('/chat-room/create/{user:id}', [ChatController::class, 'createChatRoom'])->name('create-chat-room');
+    Route::get('/chat/{chat_room:name}/messages', [ChatController::class, 'fetchMessages']);
+    Route::post('/chat/message', [ChatController::class, 'store']);
 });
 
 require __DIR__.'/auth.php';

@@ -68,43 +68,57 @@
     <script src="https://cdn.socket.io/4.5.1/socket.io.min.js"></script>
     <script>
         const socket = io('http://localhost:3000');
+        const roomId = '{{ $roomId }}';
+        const roomName = '{{ $roomName }}';
+        socket.emit('join-room', roomName);
 
-        document.getElementById('messageForm').addEventListener('submit', async function (e) {
-            e.preventDefault();
-            const message = document.getElementById('message').value;
+        document.getElementById('messageForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const message = document.getElementById('message').value;
+        const replyTo = ''; // Update this as needed
+            
+        const response = await fetch('/chat/message', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+            body: JSON.stringify({ room_id: roomId, message: message, reply_to: replyTo }),
+        });
+    
+        if (response.ok) {
+            const responseData = await response.json(); 
 
-            const response = await fetch('/messages', {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json', 
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}' 
-                },
-                body: JSON.stringify({ message })
+            socket.emit('send-message', { 
+                roomId: roomName, 
+                message: {
+                    message: responseData.message,
+                    reply_to: responseData.reply_to || '', 
+                    name: responseData.name 
+                }
             });
-
-            if (response.ok) {
-                const data = await response.json();
-                socket.emit('new-message', data);
-                document.getElementById('message').value = '';
-            }
+            console.log('Response Data:', responseData); 
+        } else {
+            console.log('Error with the request:', response.statusText);
+        }
         });
 
-        socket.on('receive-message', function (message) {
+        socket.on('receive-message', function (data) {
+            console.log(data.message);
             const messagesDiv = document.getElementById('messages');
             const newMessage = `
                 <div class="flex items-start space-x-4 mb-4">
                     <div class="w-10 h-10 bg-indigo-500 text-white rounded-full flex items-center justify-center text-sm font-semibold">
-                        ${message.name.charAt(0)}
+                        ${data.message.name.charAt(0)} <!-- Fix to use senderName -->
                     </div>
                     <div>
-                        <p class="font-semibold text-indigo-500">${message.name}</p>
-                        <p class="text-gray-800">${message.message}</p>
-                        <p class="text-sm text-gray-500">Just now</p>
+                        <p class="font-semibold text-indigo-500">${data.message.name}</p>
+                        <p class="text-gray-800">${data.message.message}</p>
+                        <p class="text-sm text-gray-500"></p>
                     </div>
                 </div>
             `;
             messagesDiv.innerHTML += newMessage;
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            document.getElementById('message').value = '';
         });
+
     </script>
 </x-app-layout>
