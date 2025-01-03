@@ -24,7 +24,7 @@
                                 <div>
                                     <p class="font-semibold text-indigo-500">{{ $message->user->name }}</p>
                                     <p class="text-gray-800">{{ $message->message }}</p>
-                                    <p class="text-sm text-gray-500">{{ $message->created_at->diffForHumans() }}</p>
+                                    <p class="text-sm text-gray-500">{{ !empty($message->created_at) ? $message->created_at->diffForHumans() : '' }}</p>
                                 </div>
                             </div>
                         @empty
@@ -70,47 +70,35 @@
         const socket = io('http://localhost:3000');
         const roomId = '{{ $roomId }}';
         const roomName = '{{ $roomName }}';
-        socket.emit('join-room', roomName);
+        socket.emit('join-room', {roomId: roomName, userId: '{{ auth()->user()->id }}'});
 
         document.getElementById('messageForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const message = document.getElementById('message').value;
-        const replyTo = ''; // Update this as needed
-            
-        const response = await fetch('/chat/message', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
-            body: JSON.stringify({ room_id: roomId, message: message, reply_to: replyTo }),
-        });
-    
-        if (response.ok) {
-            const responseData = await response.json(); 
+        const replyTo = null;
 
-            socket.emit('send-message', { 
+        socket.emit('send-message', { 
                 roomId: roomName, 
                 message: {
-                    message: responseData.message,
-                    reply_to: responseData.reply_to || '', 
-                    name: responseData.name 
+                    message: message,
+                    replyTo: replyTo || '', 
+                    name: '{{ Auth::user()->name }}',
+                    userId: '{{ Auth::user()->id }}',
+                    roomId: roomId,
                 }
-            });
-            console.log('Response Data:', responseData); 
-        } else {
-            console.log('Error with the request:', response.statusText);
-        }
         });
-
+    });
         socket.on('receive-message', function (data) {
-            console.log(data.message);
+            console.log(data);
             const messagesDiv = document.getElementById('messages');
             const newMessage = `
                 <div class="flex items-start space-x-4 mb-4">
                     <div class="w-10 h-10 bg-indigo-500 text-white rounded-full flex items-center justify-center text-sm font-semibold">
-                        ${data.message.name.charAt(0)} <!-- Fix to use senderName -->
+                        ${data.senderName.charAt(0)} <!-- Fix to use senderName -->
                     </div>
                     <div>
-                        <p class="font-semibold text-indigo-500">${data.message.name}</p>
-                        <p class="text-gray-800">${data.message.message}</p>
+                        <p class="font-semibold text-indigo-500">${data.senderName}</p>
+                        <p class="text-gray-800">${data.message}</p>
                         <p class="text-sm text-gray-500"></p>
                     </div>
                 </div>
