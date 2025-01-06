@@ -8,12 +8,19 @@
                         <h4 class="text-lg font-semibold">Chat Room</h4>
                         <p class="text-sm opacity-80">Connect and communicate instantly</p>
                     </div>
-
-                    <!-- Messages -->
+    
+                    <!-- Messages Container -->
+                    <div id="loadMore" class="text-center py-4">
+                        <button id="loadMoreButton" class="text-indigo-500 hover:underline">Load older messages</button>
+                    </div>
                     <div 
                         class="p-4 space-y-4 overflow-y-auto" 
                         style="height: 450px; background-color: #f7f9fc;" 
                         id="messages">
+                        <!-- Load More Button -->
+                       
+    
+                        <!-- Messages List -->
                         @forelse ($messages as $message)
                             <div class="flex items-start space-x-4">
                                 <!-- Avatar -->
@@ -31,7 +38,7 @@
                             <p class="text-center text-gray-500">No messages yet. Start the conversation!</p>
                         @endforelse
                     </div>
-
+    
                     <!-- Footer -->
                     <div class="p-4 bg-gray-100 rounded-b-lg">
                         <form id="messageForm" class="flex items-center">
@@ -63,50 +70,116 @@
             </div>
         </div>
     </div>
-
     <!-- Scripts -->
     <script src="https://cdn.socket.io/4.5.1/socket.io.min.js"></script>
     <script>
         const socket = io('http://localhost:3000');
         const roomId = '{{ $roomId }}';
         const roomName = '{{ $roomName }}';
-        socket.emit('join-room', {roomId: roomName, userId: '{{ auth()->user()->id }}'});
+        let isLoading = false;
+        let nextPageUrl = '{{ $messages->nextPageUrl() }}';
+    
+        socket.emit('join-room', { roomId: roomName, userId: '{{ auth()->user()->id }}' });
+    
+        async function loadOlderMessages() {
 
+            if (!nextPageUrl || isLoading) return;
+
+            isLoading = true;
+            document.getElementById('loadMoreButton').textContent = 'Loading...';
+
+            try {
+                const response = await fetch(nextPageUrl, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                });
+            
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+            
+                const data = await response.json();
+                console.log('Server Response:', data);
+            
+                if (data.messages && typeof data.messages === 'object' && !Array.isArray(data.messages)) {
+                    data.messages = Object.values(data.messages);
+                }
+            
+                if (Array.isArray(data.messages) && data.messages.length > 0) {
+                    const messagesDiv = document.getElementById('messages');
+                    const newMessages = data.messages.map(message => `
+                        <div class="flex items-start space-x-4 mb-4">
+                            <div class="w-10 h-10 bg-indigo-500 text-white rounded-full flex items-center justify-center text-sm font-semibold">
+                                ${message.name.charAt(0)}
+                            </div>
+                            <div>
+                                <p class="font-semibold text-indigo-500">${message.name}</p>
+                                <p class="text-gray-800">${message.message}</p>
+                                <p class="text-sm text-gray-500">${new Date(message.created_at).toLocaleTimeString()}</p>
+                            </div>
+                        </div>
+                    `).join('');
+                    
+                    const loadMoreButton = document.getElementById('loadMore');
+                    messagesDiv.insertAdjacentHTML('afterbegin', newMessages);
+                    nextPageUrl = data.next_page_url;
+                } else {
+                    console.log('no data')
+                    document.getElementById('loadMore').style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Error loading older messages:', error);
+            } finally {
+                isLoading = false;
+                document.getElementById('loadMoreButton').textContent = 'Load older messages';
+            }
+        }
+
+        document.getElementById('loadMoreButton').addEventListener('click', loadOlderMessages);
+    
+        const messagesDiv = document.getElementById('messages');
+        messagesDiv.addEventListener('scroll', () => {
+            if (messagesDiv.scrollTop === 0 && !isLoading) {
+                loadOlderMessages();
+            }
+        });
+    
         document.getElementById('messageForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const message = document.getElementById('message').value;
-        const replyTo = null;
-
-        socket.emit('send-message', { 
-                roomId: roomName, 
+            e.preventDefault();
+            const message = document.getElementById('message').value;
+            const replyTo = null;
+    
+            socket.emit('send-message', {
+                roomId: roomName,
                 message: {
                     message: message,
-                    replyTo: replyTo || '', 
+                    replyTo: replyTo || '',
                     name: '{{ Auth::user()->name }}',
                     userId: '{{ Auth::user()->id }}',
                     roomId: roomId,
                 }
+            });
         });
-    });
-        socket.on('receive-message', function (data) {
-            console.log(data);
-            const messagesDiv = document.getElementById('messages');
-            const newMessage = `
-                <div class="flex items-start space-x-4 mb-4">
-                    <div class="w-10 h-10 bg-indigo-500 text-white rounded-full flex items-center justify-center text-sm font-semibold">
-                        ${data.senderName.charAt(0)} <!-- Fix to use senderName -->
-                    </div>
-                    <div>
-                        <p class="font-semibold text-indigo-500">${data.senderName}</p>
-                        <p class="text-gray-800">${data.message}</p>
-                        <p class="text-sm text-gray-500"></p>
-                    </div>
+    
+    socket.on('receive-message', function (data) {
+        const messagesDiv = document.getElementById('messages');
+        const newMessage = `
+            <div class="flex items-start space-x-4 mb-4">
+                <div class="w-10 h-10 bg-indigo-500 text-white rounded-full flex items-center justify-center text-sm font-semibold">
+                    ${data.senderName.charAt(0)}
                 </div>
-            `;
-            messagesDiv.innerHTML += newMessage;
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
-            document.getElementById('message').value = '';
-        });
+                <div>
+                    <p class="font-semibold text-indigo-500">${data.senderName}</p>
+                    <p class="text-gray-800">${data.message}</p>
+                    <p class="text-sm text-gray-500"></p>
+                </div>
+            </div>
+        `;
 
+        messagesDiv.innerHTML += newMessage;
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        document.getElementById('message').value = '';
+    });
     </script>
 </x-app-layout>

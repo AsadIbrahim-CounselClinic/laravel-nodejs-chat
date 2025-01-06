@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
+use App\Models\ChatRoom;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -62,7 +63,12 @@ class ProfileController extends Controller
     public function users(Request $request){
 
         $users = User::where('id', '<>', Auth::id())->get();
-        
+
+        $chatRooms = ChatRoom::whereHas('participants', function ($query) {
+            $query->where('user_id', Auth::id());
+        })->with(['participants.user'])->get();
+
+        // dd($chatRooms);
         return view('users', compact('users'));
     }
 }

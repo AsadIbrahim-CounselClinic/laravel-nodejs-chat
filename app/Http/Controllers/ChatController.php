@@ -18,11 +18,7 @@ class ChatController extends Controller
     public function store(Request $request)
     {
         $request->validate(['message' => 'required']);
-        // $message = Message::create([
-        //     'user_id' => Auth::id(),
-        //     'message' => $request->message,
-        //     'name' => Auth::user()->name,
-        // ]);
+
         $message = Message::create([
             'chat_room_id' => $request->room_id,
             'reply_to' => $request->reply_to,
@@ -54,23 +50,37 @@ class ChatController extends Controller
             ]
         ]);
 
-        return redirect()->back()->withSuccess($createChatRoom->name);
+        return redirect()->back()->withSuccess(route('join-chat-room', ['chat_room' => $createChatRoom->name]));
 
     }
 
     public function fetchMessages(Request $request, ChatRoom $chatRoom)
     {
-        $chatRoom->load('participants', 'messages');
-
+        $chatRoom->load('participants');
+    
         $participant = $chatRoom->participants->firstWhere('user_id', Auth::id());
-
+    
         if (!$participant) {
             abort(404, 'You are not a participant in this chat room.');
         }
+    
+        $messages = $chatRoom->messages()
+            ->orderBy('id', 'desc')
+            ->paginate(5);
+    
+        $reversedMessages = $messages->getCollection()->reverse()->values();
+        $messages->setCollection($reversedMessages);
 
-        $messages = $chatRoom->messages;
         $roomId = $chatRoom->id;
         $roomName = $chatRoom->name;
+    
+        if ($request->ajax()) {
+            return response()->json([
+                'messages' => $messages->items(),
+                'next_page_url' => $messages->nextPageUrl(),
+            ]);
+        }
+    
         return view('chat', compact('messages', 'roomId', 'roomName'));
     }
 }

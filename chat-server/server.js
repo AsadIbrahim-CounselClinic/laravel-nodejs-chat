@@ -4,7 +4,7 @@ const { Server } = require('socket.io');
 const cors = require('cors');
 const db = require('./utilities/database');
 const app = express();
-
+const encription = require('./utilities/message_encription');
 const server = http.createServer(app);
 
 const io = new Server(server, {
@@ -85,11 +85,10 @@ io.on('connection', (socket) => {
         `;
         
         const currentTime = new Date();
-        const insertValues = [message.userId, message.message, message.name, message.roomId, currentTime, currentTime];
+        const encriptedMessage = encription.encryptMessage(message.message);
+        const insertValues = [message.userId, encriptedMessage, message.name, message.roomId, currentTime, currentTime];
     
             const [result] = await db.execute(insertSql, insertValues);
-    
-            console.log('Insert Result:', result);
 
             // Emit the message back to the room
             io.to(roomId).emit('receive-message', {
