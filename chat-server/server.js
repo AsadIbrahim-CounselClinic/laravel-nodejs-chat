@@ -27,11 +27,11 @@ io.on('connection', (socket) => {
 
     socket.on('join-room', (room) => {
         const sql = `
-            SELECT chat_room_participants.id
-            FROM chat_rooms
-            INNER JOIN chat_room_participants
-            ON chat_room_participants.chat_room_id = chat_rooms.id
-            WHERE chat_room_participants.user_id = ? AND chat_rooms.name = ?
+            SELECT crp.id
+            FROM chat_rooms AS cr
+            INNER JOIN chat_room_participants AS crp
+            ON crp.chat_room_id = cr.id
+            WHERE crp.user_id = ? AND cr.name = ?
         `;
         const values = [room.userId, room.roomId];
     
@@ -63,11 +63,11 @@ io.on('connection', (socket) => {
         try {
 
             const validationSql = `
-                SELECT chat_room_participants.id
-                FROM chat_rooms
-                INNER JOIN chat_room_participants
-                ON chat_room_participants.chat_room_id = chat_rooms.id
-                WHERE chat_room_participants.user_id = ? AND chat_rooms.name = ?
+                SELECT crp.id
+                FROM chat_rooms AS cr
+                INNER JOIN chat_room_participants AS crp
+                ON crp.chat_room_id = cr.id
+                WHERE crp.user_id = ? AND cr.name = ?
             `;
             const validationValues = [message.userId, roomId];
     
