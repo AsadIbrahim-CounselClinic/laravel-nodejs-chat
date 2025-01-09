@@ -69,6 +69,6 @@ class ProfileController extends Controller
         })->with(['participants.user'])->get();
 
         // dd($chatRooms);
-        return view('users', compact('users'));
+        return view('users', compact('users', 'chatRooms'));
     }
 }

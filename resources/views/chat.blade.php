@@ -151,18 +151,19 @@
             const replyTo = null;
     
             socket.emit('send-message', {
-                roomId: roomName,
                 message: {
                     message: message,
                     replyTo: replyTo || '',
                     name: '{{ Auth::user()->name }}',
                     userId: '{{ Auth::user()->id }}',
                     roomId: roomId,
+                    roomName: roomName,
                 }
             });
         });
     
     socket.on('receive-message', function (data) {
+        
         const messagesDiv = document.getElementById('messages');
         const newMessage = `
             <div class="flex items-start space-x-4 mb-4">

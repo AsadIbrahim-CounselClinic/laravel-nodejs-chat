@@ -49,8 +49,8 @@ class ChatController extends Controller
                 'user_id' => $user->id,
             ]
         ]);
-
-        return redirect()->back()->withSuccess(route('join-chat-room', ['chat_room' => $createChatRoom->name]));
+        
+        return redirect(route('join-chat-room', ['chat_room' => $createChatRoom->name]));
 
     }
 
